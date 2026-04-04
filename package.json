@@ -17,10 +17,13 @@
     "paddle",
     "webhook",
     "cloudflare-workers",
+    "supabase",
     "deno",
     "bun",
     "edge",
     "vercel",
+    "netlify",
+    "hono",
     "hmac",
     "proxy",
     "billing"

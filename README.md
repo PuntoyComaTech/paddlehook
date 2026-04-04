@@ -11,7 +11,7 @@ Lightweight Paddle webhook verification and proxy for any edge runtime. Verify H
 
 - **Secure** — HMAC-SHA256 verification via `crypto.subtle.verify()` with replay protection
 - **Tiny** — Under 3 KB minified, zero runtime dependencies
-- **Universal** — Works on Cloudflare Workers, Deno, Bun, Vercel Edge, Hono, Node 18+
+- **Universal** — Works on Cloudflare Workers, Supabase Edge, Deno, Bun, Vercel Edge, Netlify Edge, Hono, Node 18+
 - **Flexible** — Proxy mode for quick setup, `onVerified` callback for custom logic (queues, databases, etc.)
 - **Type-safe** — Full TypeScript support with exported types
 
@@ -64,18 +64,23 @@ In custom mode you only need `PADDLE_WEBHOOK_SECRET`.
 
 ## Runtime Examples
 
+All examples use proxy mode. For custom mode, replace `createPaddleWebhookHandler()` with `createPaddleWebhookHandler({ onVerified: ... })` and only `PADDLE_WEBHOOK_SECRET` is needed.
+
 ### Cloudflare Workers
+
+Env is injected per-request by the runtime — no setup needed.
 
 ```typescript
 import { createPaddleWebhookHandler } from "@puntoycoma/paddlehook"
-import type { PaddleWorkerEnv } from "@puntoycoma/paddlehook"
 
 export default {
-  fetch: createPaddleWebhookHandler<PaddleWorkerEnv>(),
+  fetch: createPaddleWebhookHandler(),
 }
 ```
 
-### Deno
+### Deno / Supabase Edge Functions / Netlify Edge
+
+All Deno-based runtimes use `Deno.env.get()`.
 
 ```typescript
 import { createPaddleWebhookHandler } from "@puntoycoma/paddlehook"
@@ -91,7 +96,9 @@ const handler = createPaddleWebhookHandler()
 Deno.serve((request) => handler(request, env))
 ```
 
-### Bun
+### Bun / Node 18+ / Vercel Edge
+
+All `process.env` runtimes follow the same pattern.
 
 ```typescript
 import { createPaddleWebhookHandler } from "@puntoycoma/paddlehook"
@@ -104,12 +111,21 @@ const env = {
 
 const handler = createPaddleWebhookHandler()
 
-Bun.serve({
-  fetch: (request) => handler(request, env),
-})
+// Bun
+Bun.serve({ fetch: (req) => handler(req, env) })
+
+// Node 18+
+import { serve } from "@hono/node-server" // or any http server
+serve({ fetch: (req) => handler(req, env) })
+
+// Vercel Edge
+export default (req: Request) => handler(req, env)
+export const config = { runtime: "edge" }
 ```
 
-### Hono
+### Hono (any runtime)
+
+Works on Cloudflare Workers, Deno, Bun, Node — anywhere Hono runs.
 
 ```typescript
 import { Hono } from "hono"
@@ -127,24 +143,6 @@ app.post("/webhook/paddle", (c) =>
 )
 
 export default app
-```
-
-### Vercel Edge Functions
-
-```typescript
-import { createPaddleWebhookHandler } from "@puntoycoma/paddlehook"
-
-const env = {
-  PADDLE_WEBHOOK_SECRET: process.env.PADDLE_WEBHOOK_SECRET!,
-  TARGET_URL: process.env.TARGET_URL!,
-  INTERNAL_AUTH_TOKEN: process.env.INTERNAL_AUTH_TOKEN!,
-}
-
-const handler = createPaddleWebhookHandler()
-
-export default (request: Request) => handler(request, env)
-
-export const config = { runtime: "edge" }
 ```
 
 ## Using onVerified
