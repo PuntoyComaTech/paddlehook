@@ -1,6 +1,7 @@
 import { describe, expect, it, afterEach, mock } from "bun:test"
 import { createPaddleWebhookHandler } from "../src/handler"
 import type { PaddleWorkerEnv } from "../src/types"
+import { signPayload } from "./helpers"
 
 const SECRET = "test-webhook-secret-handler"
 const TARGET_URL = "https://backend.example.com/api/webhooks/paddle"
@@ -14,28 +15,12 @@ const env: PaddleWorkerEnv = {
 
 async function createSignedRequest(body: string): Promise<Request> {
   const ts = Math.floor(Date.now() / 1000).toString()
-  const encoder = new TextEncoder()
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(SECRET),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  )
-  const signature = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    encoder.encode(`${ts}:${body}`)
-  )
-  const hex = [...new Uint8Array(signature)]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("")
-
+  const header = await signPayload(body, SECRET, ts)
   return new Request("https://worker.example.com/webhook", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Paddle-Signature": `ts=${ts};h1=${hex}`,
+      "Paddle-Signature": header,
     },
     body,
   })
@@ -191,6 +176,16 @@ describe("createPaddleWebhookHandler", () => {
     const [receivedPayload, receivedEnv] = onVerified.mock.calls[0]
     expect(receivedPayload).toBe(SAMPLE_BODY)
     expect(receivedEnv).toBe(env)
+  })
+
+  it("returns 500 when proxy env vars are missing", async () => {
+    const baseEnv = { PADDLE_WEBHOOK_SECRET: SECRET } as PaddleWorkerEnv
+    const baseHandler = createPaddleWebhookHandler<PaddleWorkerEnv>()
+    const request = await createSignedRequest(SAMPLE_BODY)
+    const response = await baseHandler(request, baseEnv)
+    expect(response.status).toBe(500)
+    const body = (await response.json()) as JsonBody
+    expect(body.error).toBe("TARGET_URL and INTERNAL_AUTH_TOKEN are required in proxy mode")
   })
 
   it("does not call fetch when onVerified is provided", async () => {

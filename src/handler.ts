@@ -40,6 +40,9 @@ export function createPaddleWebhookHandler<TEnv extends PaddleBaseEnv = PaddleWo
     }
 
     const proxyEnv = env as unknown as PaddleWorkerEnv
+    if (!proxyEnv.TARGET_URL || !proxyEnv.INTERNAL_AUTH_TOKEN) {
+      return jsonResponse({ error: "TARGET_URL and INTERNAL_AUTH_TOKEN are required in proxy mode" }, 500)
+    }
     let backendResponse: Response
     try {
       backendResponse = await fetch(proxyEnv.TARGET_URL, {

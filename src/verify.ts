@@ -5,10 +5,13 @@ export interface VerifyOptions {
 function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
   const bytes = new Uint8Array(hex.length / 2)
   for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16)
+    const offset = i * 2
+    bytes[i] = parseInt(hex.slice(offset, offset + 2), 16)
   }
   return bytes
 }
+
+const encoder = new TextEncoder()
 
 /**
  * Verify a Paddle webhook signature using Web Crypto API (HMAC-SHA256).
@@ -47,8 +50,6 @@ export async function verifyPaddleSignature(
     const timestamp = parseInt(ts, 10)
     if (isNaN(timestamp) || Math.abs(now - timestamp) > maxAge) return false
   }
-
-  const encoder = new TextEncoder()
 
   const key = await crypto.subtle.importKey(
     "raw",
