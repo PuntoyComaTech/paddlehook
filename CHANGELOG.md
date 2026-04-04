@@ -1,5 +1,13 @@
 # @puntoycoma/paddlehook — Changelog
 
+## [1.4.1](https://github.com/PuntoyComaTech/paddlehook/compare/v1.4.0...v1.4.1) (2026-04-04)
+
+
+### Bug Fixes
+
+* trigger initial npm publish ([7247b87](https://github.com/PuntoyComaTech/paddlehook/commit/7247b878896b4b8881df3fc903d5e50fca76cbfa))
+* trigger initial npm publish ([ce878fd](https://github.com/PuntoyComaTech/paddlehook/commit/ce878fd1c4a0d3941a1d64951aec60fdfa3943b4))
+
 ## [1.4.0](https://github.com/PuntoyComaTech/paddlehook/compare/v1.3.0...v1.4.0) (2026-04-04)
 
 
