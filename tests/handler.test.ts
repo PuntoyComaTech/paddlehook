@@ -1,6 +1,7 @@
 import { describe, expect, it, afterEach, mock } from "bun:test"
 import { createPaddleWebhookHandler } from "../src/handler"
 import type { PaddleWorkerEnv } from "../src/types"
+import type { PaddleWebhookEvent } from "../src/events"
 import { signPayload } from "./helpers"
 
 const SECRET = "test-webhook-secret-handler"
@@ -162,9 +163,9 @@ describe("createPaddleWebhookHandler", () => {
     expect(calledInit.body).toBe(SAMPLE_BODY)
   })
 
-  it("calls onVerified with payload and env when provided", async () => {
-    const onVerified = mock((payload: string, _env: PaddleWorkerEnv) =>
-      new Response(JSON.stringify({ queued: true, size: payload.length }), { status: 202 })
+  it("calls onVerified with event and env when provided", async () => {
+    const onVerified = mock((event: PaddleWebhookEvent, _env: PaddleWorkerEnv) =>
+      new Response(JSON.stringify({ received: true, type: event.event_type }), { status: 202 })
     )
 
     const customHandler = createPaddleWebhookHandler<PaddleWorkerEnv>({ onVerified })
@@ -173,8 +174,10 @@ describe("createPaddleWebhookHandler", () => {
 
     expect(response.status).toBe(202)
     expect(onVerified).toHaveBeenCalledTimes(1)
-    const [receivedPayload, receivedEnv] = onVerified.mock.calls[0]
-    expect(receivedPayload).toBe(SAMPLE_BODY)
+    const [receivedEvent, receivedEnv] = onVerified.mock.calls[0]
+    expect(receivedEvent.event_type).toBe("subscription.created")
+    expect(receivedEvent.event_id).toBe("evt_test_123")
+    expect(receivedEvent.data).toEqual({ id: "sub_123" })
     expect(receivedEnv).toBe(env)
   })
 
@@ -199,5 +202,37 @@ describe("createPaddleWebhookHandler", () => {
     await customHandler(request, env)
 
     expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it("returns 200 with skipped:true for filtered-out events", async () => {
+    globalThis.fetch = mock(() =>
+      Promise.resolve(new Response(null, { status: 200 }))
+    ) as unknown as typeof fetch
+
+    const filteredHandler = createPaddleWebhookHandler<PaddleWorkerEnv>({
+      events: ["transaction.completed"],
+    })
+    const request = await createSignedRequest(SAMPLE_BODY) // SAMPLE_BODY has event_type: "subscription.created"
+    const response = await filteredHandler(request, env)
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as { ok: boolean; skipped: boolean }
+    expect(body.skipped).toBe(true)
+  })
+
+  it("processes matching events when filter is set", async () => {
+    globalThis.fetch = mock(() =>
+      Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+    ) as unknown as typeof fetch
+
+    const filteredHandler = createPaddleWebhookHandler<PaddleWorkerEnv>({
+      events: ["subscription.created"],
+    })
+    const request = await createSignedRequest(SAMPLE_BODY)
+    const response = await filteredHandler(request, env)
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as { ok: boolean }
+    expect(body.ok).toBe(true)
   })
 })
