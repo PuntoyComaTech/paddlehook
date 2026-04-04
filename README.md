@@ -1,81 +1,201 @@
-# @puntoycoma/paddle-cf-worker
+# @puntoycoma/paddlehook
 
-Lightweight Paddle webhook proxy for Cloudflare Workers with HMAC-SHA256 verification.
+Lightweight Paddle webhook verification and proxy for any edge runtime.
 
-Sits between Paddle and your backend: verifies webhook signatures at the edge, then proxies valid requests to your API with an internal auth token.
+Verifies HMAC-SHA256 signatures at the edge, then either proxies to your backend or hands you the verified payload to do whatever you want.
 
 ```
-Paddle --> CF Worker (verify HMAC) --> Your Backend
+Paddle --> paddlehook (verify HMAC) --> Your backend / queue / anything
 ```
+
+Zero runtime dependencies. Works on Cloudflare Workers, Deno, Bun, Vercel Edge, Node 18+.
 
 ## Install
 
 ```bash
-npm install @puntoycoma/paddle-cf-worker
+npm install @puntoycoma/paddlehook
 ```
 
 ## Quick Start
 
-```typescript
-import { createPaddleWebhookHandler } from "@puntoycoma/paddle-cf-worker"
-import type { PaddleWorkerEnv } from "@puntoycoma/paddle-cf-worker"
+### Proxy mode (default)
 
-const handleWebhook = createPaddleWebhookHandler<PaddleWorkerEnv>()
-
-export default {
-  async fetch(request: Request, env: PaddleWorkerEnv): Promise<Response> {
-    return handleWebhook(request, env)
-  },
-}
-```
-
-### With custom env bindings
+Verifies the signature and forwards the payload to your backend with a Bearer token.
 
 ```typescript
-import { createPaddleWebhookHandler } from "@puntoycoma/paddle-cf-worker"
-import type { PaddleWorkerEnv } from "@puntoycoma/paddle-cf-worker"
+import { createPaddleWebhookHandler } from "@puntoycoma/paddlehook"
 
-interface Env extends PaddleWorkerEnv {
-  MY_KV: KVNamespace
-}
+const handler = createPaddleWebhookHandler()
 
-const handleWebhook = createPaddleWebhookHandler<Env>()
-
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url)
-
-    if (url.pathname === "/webhook/paddle") {
-      return handleWebhook(request, env)
-    }
-
-    return new Response("Not found", { status: 404 })
-  },
-}
+export default { fetch: handler }
 ```
 
-## Environment Variables
-
-Configure these as secrets in your Cloudflare Worker:
+Set three environment variables and you're done:
 
 | Variable | Description |
 |----------|-------------|
-| `PADDLE_WEBHOOK_SECRET` | Your Paddle webhook signing secret (from Paddle Dashboard > Developer Tools > Notifications) |
-| `TARGET_URL` | The backend URL to proxy verified webhooks to (e.g. `https://api.example.com/webhooks/paddle`) |
+| `PADDLE_WEBHOOK_SECRET` | Signing secret from Paddle Dashboard > Developer Tools > Notifications |
+| `TARGET_URL` | Your backend endpoint (e.g. `https://api.example.com/webhooks/paddle`) |
 | `INTERNAL_AUTH_TOKEN` | Bearer token sent to your backend in the `Authorization` header |
 
-```bash
-npx wrangler secret put PADDLE_WEBHOOK_SECRET
-npx wrangler secret put TARGET_URL
-npx wrangler secret put INTERNAL_AUTH_TOKEN
+### Custom mode (onVerified)
+
+Verifies the signature and gives you the raw payload. You decide what to do next.
+
+```typescript
+import { createPaddleWebhookHandler } from "@puntoycoma/paddlehook"
+
+const handler = createPaddleWebhookHandler({
+  onVerified: (payload) =>
+    new Response(JSON.stringify({ received: true }), { status: 202 }),
+})
 ```
 
-## Response Mapping
+In custom mode you only need `PADDLE_WEBHOOK_SECRET`.
 
-The worker maps your backend's response status to a status that controls Paddle's retry behavior:
+## Runtime Examples
 
-| Backend Response | Worker Returns | Paddle Behavior |
-|-----------------|---------------|-----------------|
+### Cloudflare Workers
+
+```typescript
+import { createPaddleWebhookHandler } from "@puntoycoma/paddlehook"
+import type { PaddleWorkerEnv } from "@puntoycoma/paddlehook"
+
+export default {
+  fetch: createPaddleWebhookHandler<PaddleWorkerEnv>(),
+}
+```
+
+### Deno
+
+```typescript
+import { createPaddleWebhookHandler } from "@puntoycoma/paddlehook"
+
+const env = {
+  PADDLE_WEBHOOK_SECRET: Deno.env.get("PADDLE_WEBHOOK_SECRET")!,
+  TARGET_URL: Deno.env.get("TARGET_URL")!,
+  INTERNAL_AUTH_TOKEN: Deno.env.get("INTERNAL_AUTH_TOKEN")!,
+}
+
+const handler = createPaddleWebhookHandler()
+
+Deno.serve((request) => handler(request, env))
+```
+
+### Bun
+
+```typescript
+import { createPaddleWebhookHandler } from "@puntoycoma/paddlehook"
+
+const env = {
+  PADDLE_WEBHOOK_SECRET: process.env.PADDLE_WEBHOOK_SECRET!,
+  TARGET_URL: process.env.TARGET_URL!,
+  INTERNAL_AUTH_TOKEN: process.env.INTERNAL_AUTH_TOKEN!,
+}
+
+const handler = createPaddleWebhookHandler()
+
+Bun.serve({
+  fetch: (request) => handler(request, env),
+})
+```
+
+### Hono
+
+```typescript
+import { Hono } from "hono"
+import { createPaddleWebhookHandler } from "@puntoycoma/paddlehook"
+
+const app = new Hono()
+const handler = createPaddleWebhookHandler()
+
+app.post("/webhook/paddle", (c) =>
+  handler(c.req.raw, {
+    PADDLE_WEBHOOK_SECRET: c.env.PADDLE_WEBHOOK_SECRET,
+    TARGET_URL: c.env.TARGET_URL,
+    INTERNAL_AUTH_TOKEN: c.env.INTERNAL_AUTH_TOKEN,
+  })
+)
+
+export default app
+```
+
+### Vercel Edge Functions
+
+```typescript
+import { createPaddleWebhookHandler } from "@puntoycoma/paddlehook"
+
+const env = {
+  PADDLE_WEBHOOK_SECRET: process.env.PADDLE_WEBHOOK_SECRET!,
+  TARGET_URL: process.env.TARGET_URL!,
+  INTERNAL_AUTH_TOKEN: process.env.INTERNAL_AUTH_TOKEN!,
+}
+
+const handler = createPaddleWebhookHandler()
+
+export default (request: Request) => handler(request, env)
+
+export const config = { runtime: "edge" }
+```
+
+## Using onVerified
+
+When you provide `onVerified`, the handler skips the proxy and calls your function with the verified payload.
+
+### Enqueue to any queue system
+
+```typescript
+import { createPaddleWebhookHandler } from "@puntoycoma/paddlehook"
+
+// Cloudflare Queue
+const handler = createPaddleWebhookHandler({
+  onVerified: (payload, env) => {
+    env.PADDLE_QUEUE.send(payload)
+    return new Response(null, { status: 202 })
+  },
+})
+
+// AWS SQS, Redis, BullMQ, or anything else — same pattern:
+// verify first, then do whatever you need.
+```
+
+### Custom processing
+
+```typescript
+import { createPaddleWebhookHandler } from "@puntoycoma/paddlehook"
+
+const handler = createPaddleWebhookHandler({
+  onVerified: (payload) => {
+    const event = JSON.parse(payload)
+
+    if (event.event_type === "subscription.canceled") {
+      // handle cancellation
+    }
+
+    return new Response(null, { status: 200 })
+  },
+})
+```
+
+### Low-level: verifyPaddleSignature
+
+If you don't want the handler at all, use the verification function directly.
+
+```typescript
+import { verifyPaddleSignature } from "@puntoycoma/paddlehook"
+
+const isValid = await verifyPaddleSignature(
+  request.headers.get("paddle-signature"),
+  await request.text(),
+  env.PADDLE_WEBHOOK_SECRET,
+  { maxAge: 300 } // optional, default 300s, set 0 to disable
+)
+```
+
+## Response Mapping (proxy mode)
+
+| Backend Response | paddlehook Returns | Paddle Behavior |
+|-----------------|-------------------|-----------------|
 | 2xx | 200 | Success, no retry |
 | 4xx | 400 | Client error, no retry |
 | 5xx | 500 | Server error, Paddle retries |
@@ -83,70 +203,55 @@ The worker maps your backend's response status to a status that controls Paddle'
 
 ## API Reference
 
-### `createPaddleWebhookHandler<TEnv>()`
-
-Factory that returns a webhook handler function.
+### `createPaddleWebhookHandler(options?)`
 
 ```typescript
-const handler = createPaddleWebhookHandler<PaddleWorkerEnv>()
-// handler: (request: Request, env: TEnv) => Promise<Response>
+// Proxy mode (default)
+const handler = createPaddleWebhookHandler()
+
+// Custom mode
+const handler = createPaddleWebhookHandler({
+  onVerified: (payload, env) => Response | Promise<Response>
+})
 ```
 
-The handler:
-- Rejects non-POST requests with `405`
-- Verifies the `Paddle-Signature` header (returns `401` if invalid)
-- Forwards the raw body to `TARGET_URL` with a `Bearer` authorization header
-- Maps the backend response status (see table above)
+Returns `(request: Request, env: TEnv) => Promise<Response>`.
 
 ### `verifyPaddleSignature(header, rawBody, secret, options?)`
 
-Low-level signature verification. Use this if you need custom handling instead of the full proxy handler.
-
-```typescript
-import { verifyPaddleSignature } from "@puntoycoma/paddle-cf-worker"
-
-const isValid = await verifyPaddleSignature(
-  request.headers.get("paddle-signature"),
-  await request.text(),
-  env.PADDLE_WEBHOOK_SECRET,
-  { maxAge: 300 } // optional, default: 300 seconds
-)
-```
-
-**Parameters:**
-
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `header` | `string \| null` | The `Paddle-Signature` header value |
-| `rawBody` | `string` | The raw request body (not parsed JSON) |
+| `header` | `string \| null` | `Paddle-Signature` header value |
+| `rawBody` | `string` | Raw request body (not parsed JSON) |
 | `secret` | `string` | Your Paddle webhook secret |
-| `options` | `VerifyOptions` | Optional. `{ maxAge?: number }` — max signature age in seconds. Default `300`. Set to `0` to disable. |
+| `options` | `VerifyOptions` | Optional. `{ maxAge?: number }` — default `300`, set `0` to disable |
 
-### `PaddleWorkerEnv`
-
-TypeScript interface for the required environment bindings.
+### Types
 
 ```typescript
-interface PaddleWorkerEnv {
+interface PaddleBaseEnv {
   PADDLE_WEBHOOK_SECRET: string
+}
+
+interface PaddleWorkerEnv extends PaddleBaseEnv {
   TARGET_URL: string
   INTERNAL_AUTH_TOKEN: string
 }
-```
 
-### `VerifyOptions`
+interface HandlerOptions<TEnv extends PaddleBaseEnv> {
+  onVerified?: (payload: string, env: TEnv) => Response | Promise<Response>
+}
 
-```typescript
 interface VerifyOptions {
-  maxAge?: number // seconds, default 300, set 0 to disable
+  maxAge?: number
 }
 ```
 
 ## Security
 
-- **HMAC-SHA256** verification using `crypto.subtle.verify()` (Web Crypto API, no Node.js dependencies)
+- **HMAC-SHA256** via `crypto.subtle.verify()` (Web Crypto API)
 - **Replay protection** rejects signatures older than 5 minutes by default (configurable via `maxAge`)
-- **Zero runtime dependencies** — runs entirely on Cloudflare Workers built-in APIs
+- **Zero runtime dependencies**
 
 ## License
 
