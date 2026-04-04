@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { verifyPaddleSignature, type VerifyOptions } from "../src/verify"
+import { verifyPaddleSignature } from "../src/verify"
 
 async function createValidSignature(
   rawBody: string,
