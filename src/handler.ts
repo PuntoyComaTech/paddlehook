@@ -54,7 +54,11 @@ export function createPaddleWebhookHandler<TEnv extends PaddleBaseEnv = PaddleWo
     }
 
     if (options?.onVerified) {
-      return options.onVerified(event, env)
+      try {
+        return await options.onVerified(event, env)
+      } catch {
+        return jsonResponse({ error: "Handler error" }, 500)
+      }
     }
 
     const proxyEnv = env as unknown as PaddleWorkerEnv

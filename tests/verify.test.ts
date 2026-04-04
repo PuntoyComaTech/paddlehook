@@ -75,4 +75,16 @@ describe("verifyPaddleSignature", () => {
     const result = await verifyPaddleSignature(header, body, secret, { maxAge: 0 })
     expect(result).toBe(true)
   })
+
+  it("returns false when h1 has non-hex characters", async () => {
+    const header = "ts=1234567890;h1=zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+    const result = await verifyPaddleSignature(header, body, secret)
+    expect(result).toBe(false)
+  })
+
+  it("returns false when h1 length is not 64", async () => {
+    const header = "ts=1234567890;h1=deadbeef"
+    const result = await verifyPaddleSignature(header, body, secret)
+    expect(result).toBe(false)
+  })
 })
