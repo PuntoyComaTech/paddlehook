@@ -1,6 +1,6 @@
 {
   "name": "@puntoycoma/paddlehook",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Lightweight Paddle webhook verification and proxy for any edge runtime",
   "type": "module",
   "author": "PuntoyComaTech",
