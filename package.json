@@ -7,11 +7,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/PuntoyComaTech/paddle-cf-worker.git"
+    "url": "git+https://github.com/PuntoyComaTech/paddlehook.git"
   },
-  "homepage": "https://github.com/PuntoyComaTech/paddle-cf-worker#readme",
+  "homepage": "https://github.com/PuntoyComaTech/paddlehook#readme",
   "bugs": {
-    "url": "https://github.com/PuntoyComaTech/paddle-cf-worker/issues"
+    "url": "https://github.com/PuntoyComaTech/paddlehook/issues"
   },
   "keywords": [
     "paddle",
