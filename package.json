@@ -1,7 +1,27 @@
 {
   "name": "@puntoycoma/paddle-cf-worker",
   "version": "0.1.0",
+  "description": "Lightweight Paddle webhook proxy for Cloudflare Workers with HMAC-SHA256 verification",
   "type": "module",
+  "author": "PuntoyComaTech",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PuntoyComaTech/paddle-cf-worker.git"
+  },
+  "homepage": "https://github.com/PuntoyComaTech/paddle-cf-worker#readme",
+  "bugs": {
+    "url": "https://github.com/PuntoyComaTech/paddle-cf-worker/issues"
+  },
+  "keywords": [
+    "paddle",
+    "webhook",
+    "cloudflare-workers",
+    "hmac",
+    "proxy",
+    "billing"
+  ],
+  "sideEffects": false,
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
