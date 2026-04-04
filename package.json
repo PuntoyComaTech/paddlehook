@@ -1,0 +1,20 @@
+{
+  "name": "@puntoycoma/paddle-cf-worker",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "latest",
+    "bun-types": "^1.3.11",
+    "typescript": "latest"
+  }
+}
