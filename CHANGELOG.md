@@ -1,5 +1,12 @@
 # @puntoycoma/paddlehook — Changelog
 
+## [1.1.1](https://github.com/PuntoyComaTech/paddlehook/compare/v1.1.0...v1.1.1) (2026-04-04)
+
+
+### Bug Fixes
+
+* **security:** validate hex input, guard maxAge, catch onVerified errors ([006a1e5](https://github.com/PuntoyComaTech/paddlehook/commit/006a1e5f11d7e7f7d57d31069d7e860a5b6d3e85))
+
 ## [1.1.0](https://github.com/PuntoyComaTech/paddlehook/compare/v1.0.0...v1.1.0) (2026-04-04)
 
 
