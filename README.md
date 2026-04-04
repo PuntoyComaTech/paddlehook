@@ -399,4 +399,18 @@ bun run build   # build for production
 
 ## License
 
-[MIT](LICENSE) - PuntoyComaTech
+[MIT](LICENSE)
+
+---
+
+<p align="center">
+  Developed by <a href="https://github.com/PuntoyComaTech"><strong>PuntoyComaTech</strong></a>
+</p>
+
+<p align="center">
+  <a href="https://www.youtube.com/@PuntoyComaTech">YouTube</a> &bull;
+  <a href="https://www.linkedin.com/in/gabriel-rubio99/">LinkedIn</a> &bull;
+  <a href="https://x.com/PuntoyComaTech">X</a> &bull;
+  <a href="https://www.instagram.com/puntoycomatech">Instagram</a> &bull;
+  <a href="https://www.tiktok.com/@puntoycomatech">TikTok</a>
+</p>
