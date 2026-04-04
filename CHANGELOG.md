@@ -1,5 +1,17 @@
 # @puntoycoma/paddlehook — Changelog
 
+## [1.1.0](https://github.com/PuntoyComaTech/paddlehook/compare/v1.0.0...v1.1.0) (2026-04-04)
+
+
+### Features
+
+* add typed Paddle events with discriminated unions ([f959b5c](https://github.com/PuntoyComaTech/paddlehook/commit/f959b5ca9b97ae2aee5b4231d51fa5647ee3a168))
+
+
+### Bug Fixes
+
+* validate event structure after JSON.parse ([a11b128](https://github.com/PuntoyComaTech/paddlehook/commit/a11b128f7fa5d348eb8f7a43326a435a33f47976))
+
 ## 1.0.0 (2026-04-04)
 
 
