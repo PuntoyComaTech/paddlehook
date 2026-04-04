@@ -1,3 +1,5 @@
+import type { PaddleEventType, PaddleWebhookEvent } from "./events"
+
 export interface PaddleBaseEnv {
   PADDLE_WEBHOOK_SECRET: string
 }
@@ -8,5 +10,6 @@ export interface PaddleWorkerEnv extends PaddleBaseEnv {
 }
 
 export interface HandlerOptions<TEnv extends PaddleBaseEnv = PaddleBaseEnv> {
-  onVerified?: (payload: string, env: TEnv) => Response | Promise<Response>
+  events?: PaddleEventType[]
+  onVerified?: (event: PaddleWebhookEvent, env: TEnv) => Response | Promise<Response>
 }

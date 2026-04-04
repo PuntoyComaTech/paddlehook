@@ -1,4 +1,5 @@
 import type { PaddleBaseEnv, PaddleWorkerEnv, HandlerOptions } from "./types"
+import type { PaddleWebhookEvent } from "./events"
 import { verifyPaddleSignature } from "./verify"
 
 function jsonResponse(body: Record<string, unknown>, status: number): Response {
@@ -35,8 +36,21 @@ export function createPaddleWebhookHandler<TEnv extends PaddleBaseEnv = PaddleWo
       return jsonResponse({ error: "Invalid signature" }, 401)
     }
 
+    // Parse the event
+    let event: PaddleWebhookEvent
+    try {
+      event = JSON.parse(rawBody) as PaddleWebhookEvent
+    } catch {
+      return jsonResponse({ error: "Invalid JSON body" }, 400)
+    }
+
+    // Filter by event type if configured
+    if (options?.events && !options.events.includes(event.event_type)) {
+      return jsonResponse({ ok: true, skipped: true }, 200)
+    }
+
     if (options?.onVerified) {
-      return options.onVerified(rawBody, env)
+      return options.onVerified(event, env)
     }
 
     const proxyEnv = env as unknown as PaddleWorkerEnv
