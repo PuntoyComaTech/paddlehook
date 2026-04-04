@@ -1,3 +1,15 @@
+export interface VerifyOptions {
+  maxAge?: number
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2)
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16)
+  }
+  return bytes
+}
+
 /**
  * Verify a Paddle webhook signature using Web Crypto API (HMAC-SHA256).
  *
@@ -6,12 +18,14 @@
  * @param header  - The `Paddle-Signature` header value
  * @param rawBody - The raw request body string (NOT parsed JSON)
  * @param secret  - Your PADDLE_WEBHOOK_SECRET
+ * @param options - Optional configuration (maxAge in seconds, default 300)
  * @returns true if the signature is valid
  */
 export async function verifyPaddleSignature(
   header: string | null,
   rawBody: string,
-  secret: string
+  secret: string,
+  options?: VerifyOptions
 ): Promise<boolean> {
   if (!header) return false
 
@@ -27,6 +41,13 @@ export async function verifyPaddleSignature(
   const h1 = parts["h1"]
   if (!ts || !h1) return false
 
+  const maxAge = options?.maxAge ?? 300
+  if (maxAge > 0) {
+    const now = Math.floor(Date.now() / 1000)
+    const timestamp = parseInt(ts, 10)
+    if (isNaN(timestamp) || Math.abs(now - timestamp) > maxAge) return false
+  }
+
   const encoder = new TextEncoder()
 
   const key = await crypto.subtle.importKey(
@@ -34,24 +55,11 @@ export async function verifyPaddleSignature(
     encoder.encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"]
+    ["verify"]
   )
 
-  const signature = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    encoder.encode(`${ts}:${rawBody}`)
-  )
+  const h1Bytes = hexToBytes(h1)
+  const dataBytes = encoder.encode(`${ts}:${rawBody}`)
 
-  const computed = [...new Uint8Array(signature)]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("")
-
-  // Constant-time comparison to prevent timing attacks
-  if (computed.length !== h1.length) return false
-  let diff = 0
-  for (let i = 0; i < computed.length; i++) {
-    diff |= computed.charCodeAt(i) ^ h1.charCodeAt(i)
-  }
-  return diff === 0
+  return crypto.subtle.verify("HMAC", key, h1Bytes, dataBytes)
 }

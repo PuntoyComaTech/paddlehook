@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { verifyPaddleSignature } from "../src/verify"
+import { verifyPaddleSignature, type VerifyOptions } from "../src/verify"
 
 async function createValidSignature(
   rawBody: string,
@@ -74,5 +74,26 @@ describe("verifyPaddleSignature", () => {
     const header = await createValidSignature(body, secret, ts)
     const result = await verifyPaddleSignature(header, body, "wrong-secret")
     expect(result).toBe(false)
+  })
+
+  it("returns false when timestamp is too old (default 300s tolerance)", async () => {
+    const ts = (Math.floor(Date.now() / 1000) - 600).toString()
+    const header = await createValidSignature(body, secret, ts)
+    const result = await verifyPaddleSignature(header, body, secret)
+    expect(result).toBe(false)
+  })
+
+  it("returns true when timestamp is within tolerance", async () => {
+    const ts = (Math.floor(Date.now() / 1000) - 100).toString()
+    const header = await createValidSignature(body, secret, ts)
+    const result = await verifyPaddleSignature(header, body, secret)
+    expect(result).toBe(true)
+  })
+
+  it("returns true when maxAge is 0 (disabled) even with old timestamp", async () => {
+    const ts = (Math.floor(Date.now() / 1000) - 600).toString()
+    const header = await createValidSignature(body, secret, ts)
+    const result = await verifyPaddleSignature(header, body, secret, { maxAge: 0 })
+    expect(result).toBe(true)
   })
 })
