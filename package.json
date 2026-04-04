@@ -1,6 +1,6 @@
 {
   "name": "@puntoycoma/paddle-cf-worker",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Lightweight Paddle webhook proxy for Cloudflare Workers with HMAC-SHA256 verification",
   "type": "module",
   "author": "PuntoyComaTech",
