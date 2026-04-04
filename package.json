@@ -1,7 +1,7 @@
 {
-  "name": "@puntoycoma/paddle-cf-worker",
+  "name": "@puntoycoma/paddlehook",
   "version": "1.0.0",
-  "description": "Lightweight Paddle webhook proxy for Cloudflare Workers with HMAC-SHA256 verification",
+  "description": "Lightweight Paddle webhook verification and proxy for any edge runtime",
   "type": "module",
   "author": "PuntoyComaTech",
   "license": "MIT",
@@ -17,6 +17,10 @@
     "paddle",
     "webhook",
     "cloudflare-workers",
+    "deno",
+    "bun",
+    "edge",
+    "vercel",
     "hmac",
     "proxy",
     "billing"

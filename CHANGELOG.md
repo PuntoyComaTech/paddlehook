@@ -1,4 +1,4 @@
-# Changelog
+# @puntoycoma/paddlehook — Changelog
 
 ## 1.0.0
 
