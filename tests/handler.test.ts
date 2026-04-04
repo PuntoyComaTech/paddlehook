@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, mock } from "bun:test"
+import { describe, expect, it, afterEach, mock } from "bun:test"
 import { createPaddleWebhookHandler } from "../src/handler"
 import type { PaddleWorkerEnv } from "../src/types"
 
@@ -56,7 +56,7 @@ describe("createPaddleWebhookHandler", () => {
   const handler = createPaddleWebhookHandler<PaddleWorkerEnv>()
   const originalFetch = globalThis.fetch
 
-  beforeEach(() => {
+  afterEach(() => {
     globalThis.fetch = originalFetch
   })
 
@@ -143,6 +143,15 @@ describe("createPaddleWebhookHandler", () => {
     expect(response.status).toBe(500)
     const body = (await response.json()) as JsonBody
     expect(body.error).toBe("Backend error")
+  })
+
+  it("returns 502 when backend is unreachable", async () => {
+    globalThis.fetch = mock(() => Promise.reject(new Error("DNS resolution failed"))) as unknown as typeof fetch
+    const request = await createSignedRequest(SAMPLE_BODY)
+    const response = await handler(request, env)
+    expect(response.status).toBe(502)
+    const body = (await response.json()) as JsonBody
+    expect(body.error).toBe("Backend unreachable")
   })
 
   it("forwards original body and Authorization header to backend", async () => {

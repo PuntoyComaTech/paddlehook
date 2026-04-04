@@ -1,6 +1,13 @@
 import type { PaddleWorkerEnv } from "./types"
 import { verifyPaddleSignature } from "./verify"
 
+function jsonResponse(body: Record<string, unknown>, status: number): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  })
+}
+
 /**
  * Factory that creates a Paddle webhook proxy handler for Cloudflare Workers.
  *
@@ -14,10 +21,7 @@ import { verifyPaddleSignature } from "./verify"
 export function createPaddleWebhookHandler<TEnv extends PaddleWorkerEnv>() {
   return async (request: Request, env: TEnv): Promise<Response> => {
     if (request.method !== "POST") {
-      return new Response(JSON.stringify({ error: "Method not allowed" }), {
-        status: 405,
-        headers: { "Content-Type": "application/json" },
-      })
+      return jsonResponse({ error: "Method not allowed" }, 405)
     }
 
     const rawBody = await request.text()
@@ -30,47 +34,34 @@ export function createPaddleWebhookHandler<TEnv extends PaddleWorkerEnv>() {
     )
 
     if (!valid) {
-      return new Response(JSON.stringify({ error: "Invalid signature" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      })
+      return jsonResponse({ error: "Invalid signature" }, 401)
     }
 
-    const backendResponse = await fetch(env.TARGET_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${env.INTERNAL_AUTH_TOKEN}`,
-      },
-      body: rawBody,
-    })
+    let backendResponse: Response
+    try {
+      backendResponse = await fetch(env.TARGET_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${env.INTERNAL_AUTH_TOKEN}`,
+        },
+        body: rawBody,
+      })
+    } catch {
+      return jsonResponse({ error: "Backend unreachable" }, 502)
+    }
 
     const status = backendResponse.status
 
     if (status >= 200 && status < 300) {
-      return new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      })
+      return jsonResponse({ ok: true }, 200)
     }
 
     if (status >= 400 && status < 500) {
-      return new Response(
-        JSON.stringify({ error: "Backend rejected the request" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
-      )
+      return jsonResponse({ error: "Backend rejected the request" }, 400)
     }
 
     // 5xx or any other unexpected status -> 500 so Paddle retries
-    return new Response(
-      JSON.stringify({ error: "Backend error" }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    )
+    return jsonResponse({ error: "Backend error" }, 500)
   }
 }
