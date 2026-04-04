@@ -44,7 +44,9 @@ export async function verifyPaddleSignature(
   const h1 = parts["h1"]
   if (!ts || !h1) return false
 
-  const maxAge = options?.maxAge ?? 300
+  if (h1.length !== 64 || !/^[0-9a-fA-F]+$/.test(h1)) return false
+
+  const maxAge = Math.max(options?.maxAge ?? 300, 0)
   if (maxAge > 0) {
     const now = Math.floor(Date.now() / 1000)
     const timestamp = parseInt(ts, 10)

@@ -235,4 +235,33 @@ describe("createPaddleWebhookHandler", () => {
     const body = (await response.json()) as { ok: boolean }
     expect(body.ok).toBe(true)
   })
+
+  it("returns 500 when onVerified throws", async () => {
+    const customHandler = createPaddleWebhookHandler<PaddleWorkerEnv>({
+      onVerified: () => { throw new Error("boom") }
+    })
+    const request = await createSignedRequest(SAMPLE_BODY)
+    const response = await customHandler(request, env)
+    expect(response.status).toBe(500)
+    const body = (await response.json()) as JsonBody
+    expect(body.error).toBe("Handler error")
+  })
+
+  it("returns 400 for valid signature with invalid JSON body", async () => {
+    const invalidJson = "not json at all"
+    const request = await createSignedRequest(invalidJson)
+    const response = await handler(request, env)
+    expect(response.status).toBe(400)
+    const body = (await response.json()) as JsonBody
+    expect(body.error).toBe("Invalid JSON body")
+  })
+
+  it("returns 400 for valid signature with JSON missing event_type", async () => {
+    const noEventType = JSON.stringify({ foo: "bar" })
+    const request = await createSignedRequest(noEventType)
+    const response = await handler(request, env)
+    expect(response.status).toBe(400)
+    const body = (await response.json()) as JsonBody
+    expect(body.error).toBe("Invalid event structure")
+  })
 })
