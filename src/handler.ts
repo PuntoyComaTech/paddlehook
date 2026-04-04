@@ -36,10 +36,14 @@ export function createPaddleWebhookHandler<TEnv extends PaddleBaseEnv = PaddleWo
       return jsonResponse({ error: "Invalid signature" }, 401)
     }
 
-    // Parse the event
+    // Parse and validate the event envelope
     let event: PaddleWebhookEvent
     try {
-      event = JSON.parse(rawBody) as PaddleWebhookEvent
+      const parsed = JSON.parse(rawBody)
+      if (!parsed || typeof parsed !== "object" || !("event_type" in parsed)) {
+        return jsonResponse({ error: "Invalid event structure" }, 400)
+      }
+      event = parsed as PaddleWebhookEvent
     } catch {
       return jsonResponse({ error: "Invalid JSON body" }, 400)
     }
