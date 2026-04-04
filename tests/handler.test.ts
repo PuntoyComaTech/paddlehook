@@ -176,4 +176,33 @@ describe("createPaddleWebhookHandler", () => {
     )
     expect(calledInit.body).toBe(SAMPLE_BODY)
   })
+
+  it("calls onVerified with payload and env when provided", async () => {
+    const onVerified = mock((payload: string, _env: PaddleWorkerEnv) =>
+      new Response(JSON.stringify({ queued: true, size: payload.length }), { status: 202 })
+    )
+
+    const customHandler = createPaddleWebhookHandler<PaddleWorkerEnv>({ onVerified })
+    const request = await createSignedRequest(SAMPLE_BODY)
+    const response = await customHandler(request, env)
+
+    expect(response.status).toBe(202)
+    expect(onVerified).toHaveBeenCalledTimes(1)
+    const [receivedPayload, receivedEnv] = onVerified.mock.calls[0]
+    expect(receivedPayload).toBe(SAMPLE_BODY)
+    expect(receivedEnv).toBe(env)
+  })
+
+  it("does not call fetch when onVerified is provided", async () => {
+    const mockFetch = mock(() => Promise.resolve(new Response(null, { status: 200 })))
+    globalThis.fetch = mockFetch as unknown as typeof fetch
+
+    const customHandler = createPaddleWebhookHandler<PaddleWorkerEnv>({
+      onVerified: () => new Response(null, { status: 202 })
+    })
+    const request = await createSignedRequest(SAMPLE_BODY)
+    await customHandler(request, env)
+
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
 })

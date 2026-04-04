@@ -1,4 +1,4 @@
-import type { PaddleWorkerEnv } from "./types"
+import type { PaddleBaseEnv, PaddleWorkerEnv, HandlerOptions } from "./types"
 import { verifyPaddleSignature } from "./verify"
 
 function jsonResponse(body: Record<string, unknown>, status: number): Response {
@@ -9,16 +9,14 @@ function jsonResponse(body: Record<string, unknown>, status: number): Response {
 }
 
 /**
- * Factory that creates a Paddle webhook proxy handler for Cloudflare Workers.
+ * Factory that creates a Paddle webhook handler for any edge runtime.
  *
- * Flow: Paddle -> CF Worker (verify HMAC) -> POST to backend -> return status to Paddle.
- *
- * Response mapping:
- * - Backend 2xx -> 200 to Paddle
- * - Backend 4xx -> 400 to Paddle (no retry)
- * - Backend 5xx -> 500 to Paddle (Paddle retries)
+ * Default: verifies HMAC signature and proxies to TARGET_URL.
+ * With onVerified: verifies signature and delegates to your callback.
  */
-export function createPaddleWebhookHandler<TEnv extends PaddleWorkerEnv>() {
+export function createPaddleWebhookHandler<TEnv extends PaddleBaseEnv = PaddleWorkerEnv>(
+  options?: HandlerOptions<TEnv>
+) {
   return async (request: Request, env: TEnv): Promise<Response> => {
     if (request.method !== "POST") {
       return jsonResponse({ error: "Method not allowed" }, 405)
@@ -37,13 +35,18 @@ export function createPaddleWebhookHandler<TEnv extends PaddleWorkerEnv>() {
       return jsonResponse({ error: "Invalid signature" }, 401)
     }
 
+    if (options?.onVerified) {
+      return options.onVerified(rawBody, env)
+    }
+
+    const proxyEnv = env as unknown as PaddleWorkerEnv
     let backendResponse: Response
     try {
-      backendResponse = await fetch(env.TARGET_URL, {
+      backendResponse = await fetch(proxyEnv.TARGET_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${env.INTERNAL_AUTH_TOKEN}`,
+          Authorization: `Bearer ${proxyEnv.INTERNAL_AUTH_TOKEN}`,
         },
         body: rawBody,
       })
