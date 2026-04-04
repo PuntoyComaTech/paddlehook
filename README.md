@@ -1,26 +1,35 @@
 # @puntoycoma/paddlehook
 
-Lightweight Paddle webhook verification and proxy for any edge runtime.
+[![npm version](https://img.shields.io/npm/v/@puntoycoma/paddlehook)](https://www.npmjs.com/package/@puntoycoma/paddlehook)
+[![npm bundle size](https://img.shields.io/bundlephobia/minzip/@puntoycoma/paddlehook)](https://bundlephobia.com/package/@puntoycoma/paddlehook)
+[![CI](https://github.com/PuntoyComaTech/paddlehook/actions/workflows/ci.yml/badge.svg)](https://github.com/PuntoyComaTech/paddlehook/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Verifies HMAC-SHA256 signatures at the edge, then either proxies to your backend or hands you the verified payload to do whatever you want.
+Lightweight Paddle webhook verification and proxy for any edge runtime. Verify HMAC-SHA256 signatures, prevent replay attacks, and forward verified payloads to your backend or custom handler — in under 3 KB with zero dependencies.
 
-```
-Paddle --> paddlehook (verify HMAC) --> Your backend / queue / anything
-```
+## Why paddlehook?
 
-Zero runtime dependencies. Works on Cloudflare Workers, Deno, Bun, Vercel Edge, Node 18+.
+- **Secure** — HMAC-SHA256 verification via `crypto.subtle.verify()` with replay protection
+- **Tiny** — Under 3 KB minified, zero runtime dependencies
+- **Universal** — Works on Cloudflare Workers, Deno, Bun, Vercel Edge, Hono, Node 18+
+- **Flexible** — Proxy mode for quick setup, `onVerified` callback for custom logic (queues, databases, etc.)
+- **Type-safe** — Full TypeScript support with exported types
 
 ## Install
 
 ```bash
 npm install @puntoycoma/paddlehook
+# or
+bun add @puntoycoma/paddlehook
+# or
+pnpm add @puntoycoma/paddlehook
 ```
 
 ## Quick Start
 
 ### Proxy mode (default)
 
-Verifies the signature and forwards the payload to your backend with a Bearer token.
+Verifies the Paddle webhook signature and forwards the payload to your backend with a Bearer token.
 
 ```typescript
 import { createPaddleWebhookHandler } from "@puntoycoma/paddlehook"
@@ -40,7 +49,7 @@ Set three environment variables and you're done:
 
 ### Custom mode (onVerified)
 
-Verifies the signature and gives you the raw payload. You decide what to do next.
+Verifies the Paddle webhook signature and gives you the raw payload. You decide what happens next — enqueue, store, process inline, anything.
 
 ```typescript
 import { createPaddleWebhookHandler } from "@puntoycoma/paddlehook"
@@ -140,7 +149,7 @@ export const config = { runtime: "edge" }
 
 ## Using onVerified
 
-When you provide `onVerified`, the handler skips the proxy and calls your function with the verified payload.
+When you provide `onVerified`, the handler skips the proxy and calls your function with the verified payload. Use this for queues, databases, or any custom processing.
 
 ### Enqueue to any queue system
 
@@ -159,7 +168,7 @@ const handler = createPaddleWebhookHandler({
 // verify first, then do whatever you need.
 ```
 
-### Custom processing
+### Custom event processing
 
 ```typescript
 import { createPaddleWebhookHandler } from "@puntoycoma/paddlehook"
@@ -179,7 +188,7 @@ const handler = createPaddleWebhookHandler({
 
 ### Low-level: verifyPaddleSignature
 
-If you don't want the handler at all, use the verification function directly.
+Use the verification function directly if you don't need the handler.
 
 ```typescript
 import { verifyPaddleSignature } from "@puntoycoma/paddlehook"
@@ -205,6 +214,8 @@ const isValid = await verifyPaddleSignature(
 
 ### `createPaddleWebhookHandler(options?)`
 
+Creates a Paddle webhook handler for any edge runtime. Verifies HMAC-SHA256 signatures and either proxies to your backend or delegates to your callback.
+
 ```typescript
 // Proxy mode (default)
 const handler = createPaddleWebhookHandler()
@@ -219,12 +230,14 @@ Returns `(request: Request, env: TEnv) => Promise<Response>`.
 
 ### `verifyPaddleSignature(header, rawBody, secret, options?)`
 
+Low-level Paddle webhook HMAC-SHA256 signature verification using the Web Crypto API.
+
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `header` | `string \| null` | `Paddle-Signature` header value |
 | `rawBody` | `string` | Raw request body (not parsed JSON) |
 | `secret` | `string` | Your Paddle webhook secret |
-| `options` | `VerifyOptions` | Optional. `{ maxAge?: number }` — default `300`, set `0` to disable |
+| `options` | `VerifyOptions` | Optional. `{ maxAge?: number }` — max signature age in seconds. Default `300`. Set `0` to disable replay protection. |
 
 ### Types
 
@@ -249,10 +262,21 @@ interface VerifyOptions {
 
 ## Security
 
-- **HMAC-SHA256** via `crypto.subtle.verify()` (Web Crypto API)
+- **HMAC-SHA256** verification via `crypto.subtle.verify()` (Web Crypto API, constant-time comparison)
 - **Replay protection** rejects signatures older than 5 minutes by default (configurable via `maxAge`)
-- **Zero runtime dependencies**
+- **Zero runtime dependencies** — no supply chain risk
+- **Provenance** — published with npm provenance for verifiable builds
+
+## Contributing
+
+Contributions are welcome. Please open an issue first to discuss what you'd like to change.
+
+```bash
+bun install     # install dependencies
+bun test        # run tests
+bun run build   # build for production
+```
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) - PuntoyComaTech
