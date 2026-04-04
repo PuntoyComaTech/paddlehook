@@ -1,0 +1,8 @@
+name = "paddle-webhook-proxy"
+main = "src/worker.ts"
+compatibility_date = "2024-12-01"
+
+# Secrets (set via `npx wrangler secret put <NAME>`):
+# - PADDLE_WEBHOOK_SECRET
+# - TARGET_URL
+# - INTERNAL_AUTH_TOKEN
