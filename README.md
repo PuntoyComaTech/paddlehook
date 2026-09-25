@@ -323,6 +323,7 @@ const handler = createPaddleWebhookHandler<TEnv>(options?)
 |-----------|------|-------------|
 | `options.events` | `PaddleEventType[]` | Optional. Only call `onVerified` for these event types. Others receive `200 { ok: true, skipped: true }`. |
 | `options.onVerified` | `(event: PaddleWebhookEvent, env: TEnv) => Response \| Promise<Response>` | Optional. Custom handler called after successful verification. Omit to use proxy mode. |
+| `options.onError` | `(error: unknown, event: PaddleWebhookEvent) => void` | Optional. Called when `onVerified` throws, before answering 500 so Paddle retries. |
 
 ### `verifyPaddleSignature(header, rawBody, secret, options?)`
 
@@ -354,6 +355,7 @@ interface PaddleWorkerEnv extends PaddleBaseEnv {
 interface HandlerOptions<TEnv extends PaddleBaseEnv> {
   events?: PaddleEventType[]
   onVerified?: (event: PaddleWebhookEvent, env: TEnv) => Response | Promise<Response>
+  onError?: (error: unknown, event: PaddleWebhookEvent) => void
 }
 
 // Verify options
@@ -383,6 +385,7 @@ All types are exported from `@puntoycoma/paddlehook`.
 
 - **HMAC-SHA256** verification via `crypto.subtle.verify()` — constant-time comparison, no timing attacks
 - **Replay protection** — rejects signatures older than 5 minutes by default (configurable via `maxAge`)
+- **Secret rotation** — accepts the request when any `h1` signature in the header matches
 - **Method guard** — non-POST requests are rejected with `405` before any processing
 - **Zero runtime dependencies** — no third-party code executes in your edge function
 - **npm provenance** — published with attestation for verifiable, auditable builds
