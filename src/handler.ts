@@ -56,7 +56,8 @@ export function createPaddleWebhookHandler<TEnv extends PaddleBaseEnv = PaddleWo
     if (options?.onVerified) {
       try {
         return await options.onVerified(event, env)
-      } catch {
+      } catch (error) {
+        options.onError?.(error, event)
         return jsonResponse({ error: "Handler error" }, 500)
       }
     }

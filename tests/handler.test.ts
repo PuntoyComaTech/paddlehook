@@ -247,6 +247,21 @@ describe("createPaddleWebhookHandler", () => {
     expect(body.error).toBe("Handler error")
   })
 
+  it("reports the error and event to onError when onVerified throws", async () => {
+    const failure = new Error("boom")
+    const onError = mock((_error: unknown, _event: PaddleWebhookEvent) => {})
+    const customHandler = createPaddleWebhookHandler<PaddleWorkerEnv>({
+      onVerified: () => { throw failure },
+      onError,
+    })
+    const response = await customHandler(await createSignedRequest(SAMPLE_BODY), env)
+    expect(response.status).toBe(500)
+    expect(onError).toHaveBeenCalledTimes(1)
+    const [error, event] = onError.mock.calls[0]
+    expect(error).toBe(failure)
+    expect(event.event_type).toBe("subscription.created")
+  })
+
   it("returns 400 for valid signature with invalid JSON body", async () => {
     const invalidJson = "not json at all"
     const request = await createSignedRequest(invalidJson)

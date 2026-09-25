@@ -12,4 +12,5 @@ export interface PaddleWorkerEnv extends PaddleBaseEnv {
 export interface HandlerOptions<TEnv extends PaddleBaseEnv = PaddleBaseEnv> {
   events?: PaddleEventType[]
   onVerified?: (event: PaddleWebhookEvent, env: TEnv) => Response | Promise<Response>
+  onError?: (error: unknown, event: PaddleWebhookEvent) => void
 }
