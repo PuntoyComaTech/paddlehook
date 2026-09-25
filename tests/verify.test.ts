@@ -15,6 +15,19 @@ describe("verifyPaddleSignature", () => {
     expect(result).toBe(true)
   })
 
+  it("accepts any valid h1 while Paddle rotates secrets", async () => {
+    const ts = Math.floor(Date.now() / 1000).toString()
+    const signed = await createValidSignature(body, secret, ts)
+    const header = `ts=${ts};h1=${"0".repeat(64)};${signed.split(";")[1]}`
+    expect(await verifyPaddleSignature(header, body, secret)).toBe(true)
+  })
+
+  it("returns false when no h1 matches during rotation", async () => {
+    const ts = Math.floor(Date.now() / 1000).toString()
+    const header = `ts=${ts};h1=${"0".repeat(64)};h1=${"f".repeat(64)}`
+    expect(await verifyPaddleSignature(header, body, secret)).toBe(false)
+  })
+
   it("returns false for an invalid signature", async () => {
     const header = "ts=1234567890;h1=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
     const result = await verifyPaddleSignature(header, body, secret)
