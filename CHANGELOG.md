@@ -1,5 +1,18 @@
 # @puntoycoma/paddlehook — Changelog
 
+## [1.5.0](https://github.com/PuntoyComaTech/paddlehook/compare/v1.4.1...v1.5.0) (2026-09-25)
+
+
+### Features
+
+* **handler:** report onVerified failures through onError ([5491d5f](https://github.com/PuntoyComaTech/paddlehook/commit/5491d5f65a014dee1a7a2b79bc55cd393fb73ce7))
+
+
+### Bug Fixes
+
+* **types:** match subscription items to Paddle's payload ([9d82f5a](https://github.com/PuntoyComaTech/paddlehook/commit/9d82f5a51c53fd3c9a54614ad5e442ad2fab9468))
+* **verify:** accept any matching h1 during secret rotation ([c0c177d](https://github.com/PuntoyComaTech/paddlehook/commit/c0c177d15abd64dd100ca54b8eb4d13f785ddb97))
+
 ## [1.4.1](https://github.com/PuntoyComaTech/paddlehook/compare/v1.4.0...v1.4.1) (2026-04-04)
 
 
