@@ -105,15 +105,22 @@ export interface SubscriptionItemPrice {
   description: string
   unit_price: Money
   billing_cycle: TimePeriod | null
+  custom_data: CustomData | null
+}
+
+export interface SubscriptionItemProduct {
+  id: string
+  name: string
+  custom_data: CustomData | null
 }
 
 export interface SubscriptionItem {
-  price_id: string
   quantity: number
   status: "active" | "inactive" | "trialing"
   created_at: string
   updated_at: string
-  price: SubscriptionItemPrice | null
+  price: SubscriptionItemPrice
+  product: SubscriptionItemProduct
 }
 
 export interface SubscriptionDiscount {

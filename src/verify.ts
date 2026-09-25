@@ -13,6 +13,19 @@ function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
 
 const encoder = new TextEncoder()
 
+const SIGNATURE_PATTERN = /^[0-9a-fA-F]{64}$/
+
+function parseSignatureHeader(header: string): { ts: string | undefined; signatures: string[] } {
+  let ts: string | undefined
+  const signatures: string[] = []
+  for (const part of header.split(";")) {
+    const [key, value = ""] = part.split("=", 2)
+    if (key === "ts") ts = value
+    if (key === "h1" && SIGNATURE_PATTERN.test(value)) signatures.push(value)
+  }
+  return { ts, signatures }
+}
+
 /**
  * Verify a Paddle webhook signature using Web Crypto API (HMAC-SHA256).
  *
@@ -32,19 +45,8 @@ export async function verifyPaddleSignature(
 ): Promise<boolean> {
   if (!header) return false
 
-  const parts = Object.fromEntries(
-    header.split(";").map((p) => {
-      const idx = p.indexOf("=")
-      if (idx === -1) return [p, ""]
-      return [p.slice(0, idx), p.slice(idx + 1)]
-    })
-  )
-
-  const ts = parts["ts"]
-  const h1 = parts["h1"]
-  if (!ts || !h1) return false
-
-  if (h1.length !== 64 || !/^[0-9a-fA-F]+$/.test(h1)) return false
+  const { ts, signatures } = parseSignatureHeader(header)
+  if (!ts || signatures.length === 0) return false
 
   const maxAge = Math.max(options?.maxAge ?? 300, 0)
   if (maxAge > 0) {
@@ -61,8 +63,9 @@ export async function verifyPaddleSignature(
     ["verify"]
   )
 
-  const h1Bytes = hexToBytes(h1)
-  const dataBytes = encoder.encode(`${ts}:${rawBody}`)
-
-  return crypto.subtle.verify("HMAC", key, h1Bytes, dataBytes)
+  const signedPayload = encoder.encode(`${ts}:${rawBody}`)
+  const results = await Promise.all(
+    signatures.map((signature) => crypto.subtle.verify("HMAC", key, hexToBytes(signature), signedPayload))
+  )
+  return results.includes(true)
 }

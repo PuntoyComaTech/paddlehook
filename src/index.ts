@@ -18,5 +18,7 @@ export type {
   TransactionDetails,
   TransactionTotals,
   SubscriptionItem,
+  SubscriptionItemPrice,
+  SubscriptionItemProduct,
   ScheduledChange,
 } from "./events"
